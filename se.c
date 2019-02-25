@@ -36,13 +36,19 @@ void run_blocking_threads(size_t n)
     int pipefd[2];
     ctxs[0] = thread_context_init();
     ctxs[0]->prev_fd = STDIN_FILENO;
-    pipe(pipefd);
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
+        exit(EXIT_FAILURE);
+    }
     ctxs[0]->next_fd = pipefd[1];
     pthread_create(tids, NULL, thread_blocking, ctxs[0]);
     for (size_t i = 1; i < n - 1; ++i) {
         ctxs[i] = thread_context_init();
         ctxs[i]->prev_fd = pipefd[0];
-        pipe(pipefd);
+        if (pipe(pipefd) == -1) {
+            perror("pipe");
+            exit(EXIT_FAILURE);
+        }
         ctxs[i]->next_fd = pipefd[1];
         pthread_create(tids + i, NULL, thread_blocking, ctxs[i]);
     }
