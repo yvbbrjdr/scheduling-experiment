@@ -3,6 +3,10 @@
 #include <unistd.h>
 #include <pthread.h>
 
+static void run_blocking_threads(size_t n);
+
+static void *thread_blocking(void *_ctx);
+
 struct thread_context {
     int prev_fd;
     int next_fd;
@@ -15,9 +19,54 @@ static void thread_context_destroy(struct thread_context *ctx);
 static int thread_context_blocking_read(struct thread_context *ctx);
 static int thread_context_blocking_write(struct thread_context *ctx, unsigned char byte);
 
-int main(void)
+int main(int argc, char *argv[])
 {
+    if (argc != 2) {
+        printf("usage: %s thread_num\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
+    run_blocking_threads(atoi(argv[1]));
     return 0;
+}
+
+void run_blocking_threads(size_t n)
+{
+    pthread_t tids[n];
+    struct thread_context *ctxs[n];
+    int pipefd[2];
+    ctxs[0] = thread_context_init();
+    ctxs[0]->prev_fd = STDIN_FILENO;
+    pipe(pipefd);
+    ctxs[0]->next_fd = pipefd[1];
+    pthread_create(tids, NULL, thread_blocking, ctxs[0]);
+    for (size_t i = 1; i < n - 1; ++i) {
+        ctxs[i] = thread_context_init();
+        ctxs[i]->prev_fd = pipefd[0];
+        pipe(pipefd);
+        ctxs[i]->next_fd = pipefd[1];
+        pthread_create(tids + i, NULL, thread_blocking, ctxs[i]);
+    }
+    ctxs[n - 1] = thread_context_init();
+    ctxs[n - 1]->prev_fd = pipefd[0];
+    ctxs[n - 1]->next_fd = STDOUT_FILENO;
+    pthread_create(tids + n - 1, NULL, thread_blocking, ctxs[n - 1]);
+    for (size_t i = 0; i < n; ++i) {
+        pthread_join(tids[i], NULL);
+        thread_context_destroy(ctxs[i]);
+    }
+}
+
+void *thread_blocking(void *_ctx)
+{
+    struct thread_context *ctx = _ctx;
+    for (;;) {
+        int res = thread_context_blocking_read(ctx);
+        if (res == -1)
+            return NULL;
+        res = thread_context_blocking_write(ctx, (unsigned char) res);
+        if (res != 1)
+            return NULL;
+    }
 }
 
 struct thread_context *thread_context_init(void)
@@ -32,13 +81,19 @@ struct thread_context *thread_context_init(void)
 
 void thread_context_destroy(struct thread_context *ctx)
 {
+    close(ctx->prev_fd);
+    close(ctx->next_fd);
+    if (ctx->prev_lock)
+        pthread_mutex_destroy(ctx->prev_lock);
+    if (ctx->next_lock)
+        pthread_mutex_destroy(ctx->next_lock);
     free(ctx);
 }
 
 int thread_context_blocking_read(struct thread_context *ctx)
 {
-    unsigned char data;
-    return read(ctx->prev_fd, &data, sizeof(data)) == -1 ? -1 : data;
+    unsigned char byte;
+    return read(ctx->prev_fd, &byte, sizeof(byte)) <= 0 ? -1 : byte;
 }
 
 int thread_context_blocking_write(struct thread_context *ctx, unsigned char byte)
