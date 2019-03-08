@@ -3,19 +3,21 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <time.h>
-#include <linux/futex.h>
-#include <sys/time.h>
 
 static void run_blocking_threads(size_t n);
+static void run_mutex_threads(size_t n);
 
 static void *thread_blocking(void *_ctx);
 static void *thread_blocking_head(void *_ctx);
 static void *thread_blocking_tail(void *_ctx);
 
-static void *thread_mutex(void *_ctx, void *mutex);
+static void *thread_mutex(void *_ctx);
+static void *thread_mutex_head(void *_ctx);
+static void *thread_mutex_tail(void *_ctx);
 
 
 struct thread_context {
+    char* input;
     int prev_fd;
     int next_fd;
     pthread_mutex_t *prev_lock;
@@ -33,8 +35,47 @@ int main(int argc, char *argv[])
         printf("usage: %s thread_num\n", argv[0]);
         exit(EXIT_FAILURE);
     }
-    run_blocking_threads(atoi(argv[1]));
+    run_mutex_threads(atoi(argv[1]));
     return 0;
+}
+
+void run_mutex_threads(size_t n) {
+    pthread_t tids[n]; //creates an array of thread ids so we can join later
+    struct thread_context *ctxs[n]; //creates array of ptrs to thread contexts
+    
+    //need an array of mutexes where i links i to i + 1;
+    //only need n - 1 since don't need link at last
+    pthread_mutex_t mutexes[n - 1];
+    for(size_t i = 0; i < n - 1; i++) {
+        pthread_mutex_init(&mutexes[i], NULL);
+    }
+    char *input = malloc(sizeof(*input) * 20);
+
+    ctxs[0] = thread_context_init();
+    ctxs[0]->next_lock = &mutexes[0];
+    ctxs[0]->input = input;
+
+    pthread_create(tids, NULL, thread_mutex_head, ctxs[0]);
+
+    for(size_t i = 1; i < n - 1; i++) {
+        ctxs[i] = thread_context_init();
+        ctxs[i]->prev_lock = &mutexes[i - 1];
+        ctxs[i]->next_lock = &mutexes[i];
+        ctxs[i]->input = input;
+        pthread_create(tids + i, NULL, thread_mutex, ctxs[0]);
+    } 
+
+    ctxs[n - 1] = thread_context_init();
+    ctxs[n - 1]->prev_lock = &mutexes[n - 2];
+    ctxs[n - 1]->input = input;
+
+    pthread_create(tids + n - 1, NULL, thread_mutex_tail, ctxs[0]);
+    for (size_t i = 0; i < n; ++i) {
+        pthread_join(tids[i], NULL);
+        thread_context_destroy(ctxs[i]);
+    }
+
+    
 }
 
 void run_blocking_threads(size_t n)
@@ -116,9 +157,46 @@ void *thread_blocking_tail(void *_ctx)
     }
 }
 
-void *thread_mutex(void *_ctx, void *mutex) 
-{
+void *thread_mutex(void *_ctx) {
+    struct thread_context *ctx = _ctx;
+    for(;;) {
+        pthread_mutex_lock(ctx->next_lock);
 
+        pthread_mutex_lock(ctx->prev_lock);
+
+        printf("%s", ctx->input);
+
+        pthread_mutex_unlock(ctx->prev_lock);
+
+        pthread_mutex_unlock(ctx->next_lock);
+    }
+}
+
+void *thread_mutex_head(void *_ctx) {
+    struct thread_context *ctx = _ctx;
+    for(;;) {
+        pthread_mutex_lock(ctx->next_lock);
+
+        fgets(ctx->input, 20, stdin);
+
+        pthread_mutex_unlock(ctx->next_lock);
+    }
+}
+
+void *thread_mutex_tail(void *_ctx) {
+    struct thread_context *ctx = _ctx;
+    for(;;) {
+        pthread_mutex_lock(ctx->prev_lock);
+
+        printf("%s", ctx->input);
+
+        pthread_mutex_unlock(ctx->prev_lock);
+    }
+}
+
+double cur_time() {
+    clock_t time = clock();
+    return (double) time / CLOCKS_PER_SEC;
 }
 
 struct thread_context *thread_context_init(void)
