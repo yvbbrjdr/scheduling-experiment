@@ -178,15 +178,11 @@ void *thread_mutex(void *_ctx) {
     if(res != 0) {
         return NULL;
     }
-    printf("waiting on barrier\n");
+
     pthread_barrier_wait(ctx->init);
-    printf("waiting on mutex"); 
+
     res = pthread_mutex_lock(ctx->prev_lock);
-    if(res != 0) {
-        printf("error acquiring lock\n");
-        printf("%d\n", &res);
-    }
-    printf("secured prev");
+
     res = pthread_mutex_unlock(ctx->prev_lock);
 
     res = pthread_mutex_unlock(ctx->next_lock);
@@ -197,15 +193,14 @@ void *thread_mutex_head(void *_ctx) {
     int res;
 
     res = pthread_mutex_lock(ctx->next_lock);
-    printf("secured head waiting on barrier\n");
+
     pthread_barrier_wait(ctx->init);
     
-    *(ctx->input) = 2;
-    //fgets(ctx->input, 20, stdin);
+    fgets(ctx->input, 20, stdin);
     printf("Start time: %f\n", cur_time());
     
     res = pthread_mutex_unlock(ctx->next_lock);
-    printf("unlocked head mutex");
+    
 }
 
 void *thread_mutex_tail(void *_ctx) {
