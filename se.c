@@ -48,7 +48,10 @@ void run_mutex_threads(size_t n) {
     struct thread_context *ctxs[n]; 
 
     sem_t initial;
-    sem_init(&initial, 0, -1 * n);
+    int ret = sem_init(&initial, 0, -1 * n);
+    if(ret == -1) {
+        perror("failed to init semaphore");
+    }
     
     pthread_mutex_t mutexes[n - 1];
     for(size_t i = 0; i < n - 1; i++) {
@@ -169,31 +172,28 @@ void *thread_blocking_tail(void *_ctx)
 
 void *thread_mutex(void *_ctx) {
     struct thread_context *ctx = _ctx;
-        int res = pthread_mutex_lock(ctx->next_lock);
-        if(res != 0) {
-            return NULL;
-        }
+    int res = pthread_mutex_lock(ctx->next_lock);
+    if(res != 0) {
+        return NULL;
+    }
 
-        sem_post(ctx->init);
-        sem_wait(ctx->init);
+    sem_post(ctx->init);
+    sem_wait(ctx->init);
 
-        res = pthread_mutex_lock(ctx->prev_lock);
-        if(res != 0) {
-            return NULL;
-        }
+    res = pthread_mutex_lock(ctx->prev_lock);
+    if(res != 0) {
+        return NULL;
+    }
 
-        sem_post(ctx->init);
-        sem_wait(ctx->init);
+    res = pthread_mutex_unlock(ctx->prev_lock);
+    if(res != 0) {
+        return NULL;
+    }
 
-        res = pthread_mutex_unlock(ctx->prev_lock);
-        if(res != 0) {
-            return NULL;
-        }
-
-        res = pthread_mutex_unlock(ctx->next_lock);
-        if(res != 0) {
-            return NULL;
-        }
+    res = pthread_mutex_unlock(ctx->next_lock);
+    if(res != 0) {
+        return NULL;
+    }
 }
 
 void *thread_mutex_head(void *_ctx) {
