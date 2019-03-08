@@ -23,7 +23,7 @@ struct thread_context {
     int next_fd;
     pthread_mutex_t *prev_lock;
     pthread_mutex_t *next_lock;
-    sem_t *init; 
+    pthread_barrier_t *init; 
 };
 
 static struct thread_context *thread_context_init(void);
@@ -47,8 +47,8 @@ void run_mutex_threads(size_t n) {
     pthread_t tids[n]; 
     struct thread_context *ctxs[n]; 
 
-    sem_t initial;
-    int ret = sem_init(&initial, 0, -1 * n);
+    pthread_barrier_t initial;
+    int ret = pthread_barrier_init(&initial, NULL, n);
     if(ret == -1) {
         perror("failed to init semaphore");
     }
@@ -177,8 +177,7 @@ void *thread_mutex(void *_ctx) {
         return NULL;
     }
 
-    sem_post(ctx->init);
-    sem_wait(ctx->init);
+    pthread_barrier_wait(ctx->init);
 
     res = pthread_mutex_lock(ctx->prev_lock);
     if(res != 0) {
@@ -205,8 +204,7 @@ void *thread_mutex_head(void *_ctx) {
         return NULL;
     }
 
-    sem_post(ctx->init);
-    sem_wait(ctx->init);
+    pthread_barrier_wait(ctx->init);
 
     fgets(ctx->input, 20, stdin);
     printf("Start time: %f\n", cur_time());
@@ -225,8 +223,7 @@ void *thread_mutex_tail(void *_ctx) {
         return NULL;
     }
 
-    sem_post(ctx->init);
-    sem_wait(ctx->init);
+    pthread_barrier_wait(ctx->init);
 
     printf("End time: %f\n", cur_time());
     printf("%s", ctx->input);
