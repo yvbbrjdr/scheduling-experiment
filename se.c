@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <semaphore.h>
 #include <time.h>
 
 static void run_blocking_threads(size_t n);
@@ -22,6 +23,7 @@ struct thread_context {
     int next_fd;
     pthread_mutex_t *prev_lock;
     pthread_mutex_t *next_lock;
+    sem_t *init; 
 };
 
 static struct thread_context *thread_context_init(void);
@@ -44,20 +46,21 @@ int main(int argc, char *argv[])
 void run_mutex_threads(size_t n) {
     pthread_t tids[n]; 
     struct thread_context *ctxs[n]; 
+
+    sem_t initial;
+    sem_init(&initial, 0, -1 * n);
     
     pthread_mutex_t mutexes[n - 1];
     for(size_t i = 0; i < n - 1; i++) {
         pthread_mutex_init(&mutexes[i], NULL);
     }
 
-    for(size_t i = 0; i < n - 1; i++) {
-        pthread_mutex_lock(&mutexes[i]);
-    }
     char *input = malloc(sizeof(*input) * 20);
 
     ctxs[0] = thread_context_init();
     ctxs[0]->next_lock = &mutexes[0];
     ctxs[0]->input = input;
+    ctxs[0]->init = &initial;
 
     pthread_create(tids, NULL, thread_mutex_head, ctxs[0]);
 
@@ -66,18 +69,17 @@ void run_mutex_threads(size_t n) {
         ctxs[i]->prev_lock = &mutexes[i - 1];
         ctxs[i]->next_lock = &mutexes[i];
         ctxs[i]->input = input;
+        ctxs[i]->init = &initial;
         pthread_create(tids + i, NULL, thread_mutex, ctxs[i]);
     } 
 
     ctxs[n - 1] = thread_context_init();
     ctxs[n - 1]->prev_lock = &mutexes[n - 2];
     ctxs[n - 1]->input = input;
+    ctxs[n - 1]->init = &initial;
 
     pthread_create(tids + n - 1, NULL, thread_mutex_tail, ctxs[n - 1]);
 
-    for(size_t i = 0; i < n - 1; i++) {
-        pthread_mutex_unlock(&mutexes[i]);
-    }
     for (size_t i = 0; i < n; ++i) {
         pthread_join(tids[i], NULL);
         thread_context_destroy(ctxs[i]);
@@ -172,10 +174,16 @@ void *thread_mutex(void *_ctx) {
             return NULL;
         }
 
+        sem_post(ctx->init);
+        sem_wait(ctx->init);
+
         res = pthread_mutex_lock(ctx->prev_lock);
         if(res != 0) {
             return NULL;
         }
+
+        sem_post(ctx->init);
+        sem_wait(ctx->init);
 
         res = pthread_mutex_unlock(ctx->prev_lock);
         if(res != 0) {
@@ -191,10 +199,14 @@ void *thread_mutex(void *_ctx) {
 void *thread_mutex_head(void *_ctx) {
     struct thread_context *ctx = _ctx; 
     int res;
+
     res = pthread_mutex_lock(ctx->next_lock);
     if(res != 0) {
         return NULL;
     }
+
+    sem_post(ctx->init);
+    sem_wait(ctx->init);
 
     fgets(ctx->input, 20, stdin);
     printf("Start time: %f\n", cur_time());
@@ -207,19 +219,22 @@ void *thread_mutex_head(void *_ctx) {
 
 void *thread_mutex_tail(void *_ctx) {
     struct thread_context *ctx = _ctx;
-        int res;
-        res = pthread_mutex_lock(ctx->prev_lock);
-        if(res != 0) {
-            return NULL;
-        }
+    int res;
+    res = pthread_mutex_lock(ctx->prev_lock);
+    if(res != 0) {
+        return NULL;
+    }
 
-        printf("End time: %f\n", cur_time());
-        printf("%s", ctx->input);
+    sem_post(ctx->init);
+    sem_wait(ctx->init);
 
-        res = pthread_mutex_unlock(ctx->prev_lock);
-        if(res != 0) {
-            return NULL;
-        }
+    printf("End time: %f\n", cur_time());
+    printf("%s", ctx->input);
+
+    res = pthread_mutex_unlock(ctx->prev_lock);
+    if(res != 0) {
+        return NULL;
+    }
 }
 
 double cur_time() {
