@@ -48,14 +48,16 @@ void run_mutex_threads(size_t n) {
     struct thread_context *ctxs[n]; 
 
     pthread_barrier_t initial;
-    int ret = pthread_barrier_init(&initial, NULL, n);
-    if(ret == -1) {
-        perror("failed to init semaphore");
+    int ret = pthread_barrier_init(&initial, NULL, n - 1);
+    if(ret != 0) {
+        printf("failed to init barrier");
     }
     
     pthread_mutex_t mutexes[n - 1];
     for(size_t i = 0; i < n - 1; i++) {
-        pthread_mutex_init(&mutexes[i], NULL);
+        if(pthread_mutex_init(&mutexes[i], NULL) != 0) {
+        printf("failed to initialize mutex");
+        }
     }
 
     char *input = malloc(sizeof(*input) * 20);
@@ -176,23 +178,18 @@ void *thread_mutex(void *_ctx) {
     if(res != 0) {
         return NULL;
     }
-
+    printf("waiting on barrier\n");
     pthread_barrier_wait(ctx->init);
-
+    printf("waiting on mutex"); 
     res = pthread_mutex_lock(ctx->prev_lock);
     if(res != 0) {
-        return NULL;
+        printf("error acquiring lock\n");
+        printf("%d\n", &res);
     }
-
+    printf("secured prev");
     res = pthread_mutex_unlock(ctx->prev_lock);
-    if(res != 0) {
-        return NULL;
-    }
 
     res = pthread_mutex_unlock(ctx->next_lock);
-    if(res != 0) {
-        return NULL;
-    }
 }
 
 void *thread_mutex_head(void *_ctx) {
@@ -200,38 +197,26 @@ void *thread_mutex_head(void *_ctx) {
     int res;
 
     res = pthread_mutex_lock(ctx->next_lock);
-    if(res != 0) {
-        return NULL;
-    }
-
+    printf("secured head waiting on barrier\n");
     pthread_barrier_wait(ctx->init);
-
-    fgets(ctx->input, 20, stdin);
+    
+    *(ctx->input) = 2;
+    //fgets(ctx->input, 20, stdin);
     printf("Start time: %f\n", cur_time());
-
+    
     res = pthread_mutex_unlock(ctx->next_lock);
-    if(res != 0) {
-        return NULL;
-    }
+    printf("unlocked head mutex");
 }
 
 void *thread_mutex_tail(void *_ctx) {
     struct thread_context *ctx = _ctx;
     int res;
     res = pthread_mutex_lock(ctx->prev_lock);
-    if(res != 0) {
-        return NULL;
-    }
-
-    pthread_barrier_wait(ctx->init);
 
     printf("End time: %f\n", cur_time());
     printf("%s", ctx->input);
 
     res = pthread_mutex_unlock(ctx->prev_lock);
-    if(res != 0) {
-        return NULL;
-    }
 }
 
 double cur_time() {
