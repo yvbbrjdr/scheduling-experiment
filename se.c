@@ -23,7 +23,7 @@ struct thread_context {
     int next_fd;
     pthread_mutex_t *prev_lock;
     pthread_mutex_t *next_lock;
-    pthread_barrier_t *init; 
+    pthread_barrier_t *init;
 };
 
 static struct thread_context *thread_context_init(void);
@@ -44,15 +44,15 @@ int main(int argc, char *argv[])
 }
 
 void run_mutex_threads(size_t n) {
-    pthread_t tids[n]; 
-    struct thread_context *ctxs[n]; 
+    pthread_t tids[n];
+    struct thread_context *ctxs[n];
 
     pthread_barrier_t initial;
     int ret = pthread_barrier_init(&initial, NULL, n - 1);
     if(ret != 0) {
         printf("failed to init barrier");
     }
-    
+
     pthread_mutex_t mutexes[n - 1];
     for(size_t i = 0; i < n - 1; i++) {
         if(pthread_mutex_init(&mutexes[i], NULL) != 0) {
@@ -76,7 +76,7 @@ void run_mutex_threads(size_t n) {
         ctxs[i]->input = input;
         ctxs[i]->init = &initial;
         pthread_create(tids + i, NULL, thread_mutex, ctxs[i]);
-    } 
+    }
 
     ctxs[n - 1] = thread_context_init();
     ctxs[n - 1]->prev_lock = &mutexes[n - 2];
@@ -90,7 +90,7 @@ void run_mutex_threads(size_t n) {
         thread_context_destroy(ctxs[i]);
     }
 
-    
+
 }
 
 void run_blocking_threads(size_t n)
@@ -189,18 +189,18 @@ void *thread_mutex(void *_ctx) {
 }
 
 void *thread_mutex_head(void *_ctx) {
-    struct thread_context *ctx = _ctx; 
+    struct thread_context *ctx = _ctx;
     int res;
 
     res = pthread_mutex_lock(ctx->next_lock);
 
     pthread_barrier_wait(ctx->init);
-    
+
     fgets(ctx->input, 20, stdin);
     printf("Start time: %f\n", cur_time());
-    
+
     res = pthread_mutex_unlock(ctx->next_lock);
-    
+
 }
 
 void *thread_mutex_tail(void *_ctx) {
