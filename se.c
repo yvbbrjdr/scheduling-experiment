@@ -5,6 +5,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 #include <sys/epoll.h>
+#include <fcntl.h>
+#include <errno.h>
 
 static void run_blocking_threads(size_t n);
 static void run_mutex_threads(size_t n);
@@ -264,14 +266,74 @@ void *thread_mutex_tail(void *_ctx)
 void *thread_epoll(void *_ctx)
 {
     struct thread_context *ctx = _ctx;
+    int flags = fcntl(ctx->prev_fd, F_GETFL, 0);
+    fcntl(ctx->prev_fd, F_SETFL, flags | O_NONBLOCK);
+    flags = fcntl(ctx->next_fd, F_GETFL, 0);
+    fcntl(ctx->next_fd, F_SETFL, flags | O_NONBLOCK);
+    int epoll_fd = epoll_create1(0);
+    if (epoll_fd == -1) {
+        perror("epoll_create1");
+        exit(EXIT_FAILURE);
+    }
+    struct epoll_event ev;
+    ev.events = EPOLLIN | EPOLLET;
+    ev.data.fd = ctx->prev_fd;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ctx->prev_fd, &ev) == -1) {
+        perror("epoll_ctl");
+        exit(EXIT_FAILURE);
+    }
+    ev.events = EPOLLOUT | EPOLLET;
+    ev.data.fd = ctx->next_fd;
+    if (epoll_ctl(epoll_fd, EPOLL_CTL_ADD, ctx->next_fd, &ev) == -1) {
+        perror("epoll_ctl");
+        exit(EXIT_FAILURE);
+    }
+    size_t que = 0;
     thread_context_wait_barrier(ctx);
     for (;;) {
-        int res = thread_context_blocking_read(ctx);
-        if (res == -1)
-            return NULL;
-        res = thread_context_blocking_write(ctx, (unsigned char) res);
-        if (res != 1)
-            return NULL;
+        struct epoll_event evs[2];
+        int n_ev = epoll_wait(epoll_fd, evs, 2, -1);
+        if (n_ev == -1) {
+            perror("epoll_wait");
+            exit(EXIT_FAILURE);
+        }
+        for (int i = 0; i < n_ev; ++i)
+            if (evs[i].data.fd == ctx->prev_fd) {
+                for (;;) {
+                    int res = thread_context_blocking_read(ctx);
+                    if (res >= 0) {
+                        ++que;
+                    } else if (errno == EWOULDBLOCK) {
+                        break;
+                    } else {
+                        perror("read");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                for (; que > 0;) {
+                    int res = thread_context_blocking_write(ctx, 0);
+                    if (res >= 0) {
+                        --que;
+                    } else if (errno == EWOULDBLOCK) {
+                        break;
+                    } else {
+                        perror("write");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+            } else {
+                for (; que > 0;) {
+                    int res = thread_context_blocking_write(ctx, 0);
+                    if (res >= 0) {
+                        --que;
+                    } else if (errno == EWOULDBLOCK) {
+                        break;
+                    } else {
+                        perror("write");
+                        exit(EXIT_FAILURE);
+                    }
+                }
+            }
     }
 }
 
