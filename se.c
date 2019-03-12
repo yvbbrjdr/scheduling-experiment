@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <sys/epoll.h>
 
 static void run_blocking_threads(size_t n);
 static void run_mutex_threads(size_t n);
@@ -18,8 +19,6 @@ static void *thread_mutex_head(void *_ctx);
 static void *thread_mutex_tail(void *_ctx);
 
 static void *thread_epoll(void *_ctx);
-static void *thread_epoll_head(void *_ctx);
-static void *thread_epoll_tail(void *_ctx);
 
 static double cur_time();
 
@@ -163,7 +162,7 @@ void run_epoll_threads(size_t n)
     ctxs[0] = thread_context_init();
     ctxs[0]->next_fd = pipefd[1];
     ctxs[0]->init = &initial;
-    pthread_create(tids, NULL, thread_epoll_head, ctxs[0]);
+    pthread_create(tids, NULL, thread_blocking_head, ctxs[0]);
     for (size_t i = 1; i < n - 1; ++i) {
         ctxs[i] = thread_context_init();
         ctxs[i]->prev_fd = pipefd[2 * (i - 1)];
@@ -174,7 +173,7 @@ void run_epoll_threads(size_t n)
     ctxs[n - 1] = thread_context_init();
     ctxs[n - 1]->prev_fd = pipefd[2 * (n - 2)];
     ctxs[n - 1]->init = &initial;
-    pthread_create(tids + n - 1, NULL, thread_epoll_tail, ctxs[n - 1]);
+    pthread_create(tids + n - 1, NULL, thread_blocking_tail, ctxs[n - 1]);
     for (size_t i = 0; i < n; ++i) {
         pthread_join(tids[i], NULL);
         thread_context_destroy(ctxs[i]);
@@ -273,31 +272,6 @@ void *thread_epoll(void *_ctx)
         res = thread_context_blocking_write(ctx, (unsigned char) res);
         if (res != 1)
             return NULL;
-    }
-}
-
-void *thread_epoll_head(void *_ctx)
-{
-    struct thread_context *ctx = _ctx;
-    thread_context_wait_barrier(ctx);
-    for (;;) {
-        int res = thread_context_blocking_write(ctx, 0);
-        if (res != 1) {
-            return NULL;
-        }
-        printf("Starting time: %lf\n", cur_time());
-    }
-}
-
-void *thread_epoll_tail(void *_ctx)
-{
-    struct thread_context *ctx = _ctx;
-    thread_context_wait_barrier(ctx);
-    for (;;) {
-        int res = thread_context_blocking_read(ctx);
-        if (res == -1)
-            return NULL;
-        printf("Ending time: %lf\n", cur_time());
     }
 }
 
