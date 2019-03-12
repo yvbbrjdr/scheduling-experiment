@@ -21,8 +21,10 @@ static double cur_time();
 struct thread_context {
     int prev_fd;
     int next_fd;
-    sem_t *prev_sema;
-    sem_t *next_sema;
+    sem_t *prev_r_sema;
+    sem_t *prev_w_sema;
+    sem_t *next_r_sema;
+    sem_t *next_w_sema;
     pthread_barrier_t *init;
 };
 
@@ -30,8 +32,10 @@ static struct thread_context *thread_context_init(void);
 static void thread_context_destroy(struct thread_context *ctx);
 static int thread_context_blocking_read(struct thread_context *ctx);
 static int thread_context_blocking_write(struct thread_context *ctx, unsigned char byte);
-static void thread_context_sema_up(struct thread_context *ctx);
-static void thread_context_sema_down(struct thread_context *ctx);
+static void thread_context_prev_r_sema_down(struct thread_context *ctx);
+static void thread_context_prev_w_sema_up(struct thread_context *ctx);
+static void thread_context_next_r_sema_up(struct thread_context *ctx);
+static void thread_context_next_w_sema_down(struct thread_context *ctx);
 static void thread_context_wait_barrier(struct thread_context *ctx);
 
 int main(int argc, char *argv[])
@@ -53,33 +57,45 @@ void run_mutex_threads(size_t n)
         fprintf(stderr, "pthread_barrier_init: failed\n");
         exit(EXIT_FAILURE);
     }
-    sem_t semas[n - 1];
+    sem_t r_semas[n - 1];
     for (size_t i = 0; i < n - 1; ++i)
-        if (sem_init(semas + i, 0, 0) != 0) {
+        if (sem_init(r_semas + i, 0, 0) != 0) {
+            fprintf(stderr, "sem_init: failed\n");
+            exit(EXIT_FAILURE);
+        }
+    sem_t w_semas[n - 1];
+    for (size_t i = 0; i < n - 1; ++i)
+        if (sem_init(w_semas + i, 0, 1) != 0) {
             fprintf(stderr, "sem_init: failed\n");
             exit(EXIT_FAILURE);
         }
     ctxs[0] = thread_context_init();
-    ctxs[0]->next_sema = semas;
+    ctxs[0]->next_r_sema = r_semas;
+    ctxs[0]->next_w_sema = w_semas;
     ctxs[0]->init = &initial;
     pthread_create(tids, NULL, thread_mutex_head, ctxs[0]);
     for(size_t i = 1; i < n - 1; i++) {
         ctxs[i] = thread_context_init();
-        ctxs[i]->prev_sema = semas + i - 1;
-        ctxs[i]->next_sema = semas + i;
+        ctxs[i]->prev_r_sema = r_semas + i - 1;
+        ctxs[i]->prev_w_sema = w_semas + i - 1;
+        ctxs[i]->next_r_sema = r_semas + i;
+        ctxs[i]->next_w_sema = w_semas + i;
         ctxs[i]->init = &initial;
         pthread_create(tids + i, NULL, thread_mutex, ctxs[i]);
     }
     ctxs[n - 1] = thread_context_init();
-    ctxs[n - 1]->prev_sema = semas + n - 2;
+    ctxs[n - 1]->prev_r_sema = r_semas + n - 2;
+    ctxs[n - 1]->prev_w_sema = w_semas + n - 2;
     ctxs[n - 1]->init = &initial;
     pthread_create(tids + n - 1, NULL, thread_mutex_tail, ctxs[n - 1]);
     for (size_t i = 0; i < n; ++i) {
         pthread_join(tids[i], NULL);
         thread_context_destroy(ctxs[i]);
     }
-    for (size_t i = 0; i < n - 1; ++i)
-        sem_destroy(semas + i);
+    for (size_t i = 0; i < n - 1; ++i) {
+        sem_destroy(r_semas + i);
+        sem_destroy(w_semas + i);
+    }
     pthread_barrier_destroy(&initial);
 }
 
@@ -168,8 +184,10 @@ void *thread_mutex(void *_ctx)
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);
     for (;;) {
-        thread_context_sema_down(ctx);
-        thread_context_sema_up(ctx);
+        thread_context_prev_r_sema_down(ctx);
+        thread_context_next_w_sema_down(ctx);
+        thread_context_next_r_sema_up(ctx);
+        thread_context_prev_w_sema_up(ctx);
     }
     return NULL;
 }
@@ -179,7 +197,8 @@ void *thread_mutex_head(void *_ctx)
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);
     for (;;) {
-        thread_context_sema_up(ctx);
+        thread_context_next_w_sema_down(ctx);
+        thread_context_next_r_sema_up(ctx);
         printf("Start time: %lf\n", cur_time());
     }
     return NULL;
@@ -190,7 +209,8 @@ void *thread_mutex_tail(void *_ctx)
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);
     for (;;) {
-        thread_context_sema_down(ctx);
+        thread_context_prev_r_sema_down(ctx);
+        thread_context_prev_w_sema_up(ctx);
         printf("End time: %lf\n", cur_time());
     }
     return NULL;
@@ -209,8 +229,10 @@ struct thread_context *thread_context_init(void)
         return NULL;
     ctx->prev_fd = -1;
     ctx->next_fd = -1;
-    ctx->prev_sema = NULL;
-    ctx->next_sema = NULL;
+    ctx->prev_r_sema = NULL;
+    ctx->prev_w_sema = NULL;
+    ctx->next_r_sema = NULL;
+    ctx->next_w_sema = NULL;
     ctx->init = NULL;
     return ctx;
 }
@@ -231,14 +253,24 @@ int thread_context_blocking_write(struct thread_context *ctx, unsigned char byte
     return write(ctx->next_fd, &byte, sizeof(byte));
 }
 
-void thread_context_sema_up(struct thread_context *ctx)
+void thread_context_prev_r_sema_down(struct thread_context *ctx)
 {
-    sem_post(ctx->next_sema);
+    sem_wait(ctx->prev_r_sema);
 }
 
-void thread_context_sema_down(struct thread_context *ctx)
+void thread_context_prev_w_sema_up(struct thread_context *ctx)
 {
-    sem_wait(ctx->prev_sema);
+    sem_post(ctx->prev_w_sema);
+}
+
+void thread_context_next_r_sema_up(struct thread_context *ctx)
+{
+    sem_post(ctx->next_r_sema);
+}
+
+void thread_context_next_w_sema_down(struct thread_context *ctx)
+{
+    sem_wait(ctx->next_w_sema);
 }
 
 void thread_context_wait_barrier(struct thread_context *ctx)
