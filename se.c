@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
 #include <unistd.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <sys/epoll.h>
+#include <sys/time.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -43,6 +43,8 @@ static void thread_context_prev_w_sema_up(struct thread_context *ctx);
 static void thread_context_next_r_sema_up(struct thread_context *ctx);
 static void thread_context_next_w_sema_down(struct thread_context *ctx);
 static void thread_context_wait_barrier(struct thread_context *ctx);
+
+static double start_time;
 
 int main(int argc, char *argv[])
 {
@@ -205,12 +207,13 @@ void *thread_blocking_head(void *_ctx)
 {
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);
+    start_time = cur_time();
     for (;;) {
         int res = thread_context_blocking_write(ctx, 0);
         if (res != 1) {
             return NULL;
         }
-        printf("Starting time: %lf\n", cur_time());
+        printf("Starting time: %lf\n", cur_time() - start_time);
     }
 }
 
@@ -222,7 +225,7 @@ void *thread_blocking_tail(void *_ctx)
         int res = thread_context_blocking_read(ctx);
         if (res == -1)
             return NULL;
-        printf("Ending time: %lf\n", cur_time());
+        printf("Ending time: %lf\n", cur_time() - start_time);
     }
 }
 
@@ -243,10 +246,11 @@ void *thread_mutex_head(void *_ctx)
 {
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);
+    start_time = cur_time();
     for (;;) {
         thread_context_next_w_sema_down(ctx);
         thread_context_next_r_sema_up(ctx);
-        printf("Start time: %lf\n", cur_time());
+        printf("Start time: %lf\n", cur_time() - start_time);
     }
     return NULL;
 }
@@ -258,7 +262,7 @@ void *thread_mutex_tail(void *_ctx)
     for (;;) {
         thread_context_prev_r_sema_down(ctx);
         thread_context_prev_w_sema_up(ctx);
-        printf("End time: %lf\n", cur_time());
+        printf("End time: %lf\n", cur_time() - start_time);
     }
     return NULL;
 }
@@ -339,8 +343,9 @@ void *thread_epoll(void *_ctx)
 
 double cur_time()
 {
-    clock_t time = clock();
-    return (double) time / CLOCKS_PER_SEC;
+    struct timeval t;
+    gettimeofday(&t, NULL);
+    return t.tv_sec + t.tv_usec / 1000000.0;
 }
 
 struct thread_context *thread_context_init(void)
