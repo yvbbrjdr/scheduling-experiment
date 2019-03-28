@@ -10,12 +10,19 @@ static void handler(int);
 
 int main(int argc, char *argv[])
 {
-    if (argc != 2) {
-        printf("usage: %s thread_num\n", argv[0]);
+    if (argc != 3) {
+        printf("usage: %s <b|s|e> thread_num\n", argv[0]);
         exit(EXIT_FAILURE);
     }
     signal(SIGINT, handler);
-    run_epoll_threads(atoi(argv[1]));
+    if (argv[1][0] == 'b')
+        run_blocking_threads(atoi(argv[2]));
+    else if (argv[1][0] == 's')
+        run_sema_threads(atoi(argv[2]));
+    else if (argv[1][0] == 'e')
+        run_epoll_threads(atoi(argv[2]));
+    else
+        exit(EXIT_FAILURE);
     return 0;
 }
 
