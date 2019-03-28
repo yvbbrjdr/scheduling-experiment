@@ -28,6 +28,12 @@ int thread_context_read(struct thread_context *ctx)
     return read(ctx->prev_fd, &byte, sizeof(byte)) <= 0 ? -1 : byte;
 }
 
+int thread_context_read_all(struct thread_context *ctx)
+{
+    unsigned char byte[8192];
+    return read(ctx->prev_fd, byte, sizeof(byte));
+}
+
 int thread_context_write(struct thread_context *ctx, unsigned char byte)
 {
     return write(ctx->next_fd, &byte, sizeof(byte));

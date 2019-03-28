@@ -87,39 +87,28 @@ void *thread_epoll(void *_ctx)
         }
         for (int i = 0; i < n_ev; ++i)
             if (evs[i].data.fd == ctx->prev_fd) {
-                for (;;) {
-                    int res = thread_context_read(ctx);
-                    if (res >= 0) {
-                        ++que;
-                    } else if (errno == EWOULDBLOCK) {
-                        break;
-                    } else {
-                        perror("read");
-                        exit(EXIT_FAILURE);
-                    }
-                }
+                int res = thread_context_read_all(ctx);
+                if (res < 0)
+                    return NULL;
+                que += res;
                 for (; que > 0;) {
                     int res = thread_context_write(ctx, 0);
-                    if (res >= 0) {
-                        --que;
-                    } else if (errno == EWOULDBLOCK) {
+                    if (res >= 0)
+                        que -= res;
+                    else if (errno == EWOULDBLOCK)
                         break;
-                    } else {
-                        perror("write");
-                        exit(EXIT_FAILURE);
-                    }
+                    else
+                        return NULL;
                 }
             } else {
                 for (; que > 0;) {
                     int res = thread_context_write(ctx, 0);
-                    if (res >= 0) {
-                        --que;
-                    } else if (errno == EWOULDBLOCK) {
+                    if (res >= 0)
+                        que -= res;
+                    else if (errno == EWOULDBLOCK)
                         break;
-                    } else {
-                        perror("write");
-                        exit(EXIT_FAILURE);
-                    }
+                    else
+                        return NULL;
                 }
             }
     }
