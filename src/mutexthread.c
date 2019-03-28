@@ -1,4 +1,6 @@
 #include "mutexthread.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include "threadcontext.h"
@@ -72,11 +74,11 @@ void *thread_mutex_head(void *_ctx)
 {
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);
-    start_time = cur_time();
+    log_init();
     for (;;) {
         thread_context_next_w_sema_down(ctx);
-        thread_context_next_r_sema_up(ctx);
         log_start();
+        thread_context_next_r_sema_up(ctx);
     }
     return NULL;
 }
@@ -87,8 +89,8 @@ void *thread_mutex_tail(void *_ctx)
     thread_context_wait_barrier(ctx);
     for (;;) {
         thread_context_prev_r_sema_down(ctx);
-        thread_context_prev_w_sema_up(ctx);
         log_end();
+        thread_context_prev_w_sema_up(ctx);
     }
     return NULL;
 }

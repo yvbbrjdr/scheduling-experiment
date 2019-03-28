@@ -52,10 +52,10 @@ void *thread_blocking(void *_ctx)
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);
     for (;;) {
-        int res = thread_context_blocking_read(ctx);
+        int res = thread_context_read(ctx);
         if (res == -1)
             return NULL;
-        res = thread_context_blocking_write(ctx, (unsigned char) res);
+        res = thread_context_write(ctx, (unsigned char) res);
         if (res != 1)
             return NULL;
     }
@@ -65,13 +65,13 @@ void *thread_blocking_head(void *_ctx)
 {
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);
-    start_time = cur_time();
+    log_init();
     for (;;) {
-        int res = thread_context_blocking_write(ctx, 0);
+        log_start();
+        int res = thread_context_write(ctx, 0);
         if (res != 1) {
             return NULL;
         }
-        log_start();
     }
 }
 
@@ -80,7 +80,7 @@ void *thread_blocking_tail(void *_ctx)
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);
     for (;;) {
-        int res = thread_context_blocking_read(ctx);
+        int res = thread_context_read(ctx);
         if (res == -1)
             return NULL;
         log_end();

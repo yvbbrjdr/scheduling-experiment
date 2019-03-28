@@ -22,13 +22,13 @@ void thread_context_destroy(struct thread_context *ctx)
     free(ctx);
 }
 
-int thread_context_blocking_read(struct thread_context *ctx)
+int thread_context_read(struct thread_context *ctx)
 {
     unsigned char byte;
     return read(ctx->prev_fd, &byte, sizeof(byte)) <= 0 ? -1 : byte;
 }
 
-int thread_context_blocking_write(struct thread_context *ctx, unsigned char byte)
+int thread_context_write(struct thread_context *ctx, unsigned char byte)
 {
     return write(ctx->next_fd, &byte, sizeof(byte));
 }

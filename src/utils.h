@@ -1,11 +1,10 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-extern double start_time;
-
-double cur_time();
-
+void log_init();
 void log_start();
 void log_end();
+void log_dump();
+void log_destroy();
 
 #endif // UTILS_H

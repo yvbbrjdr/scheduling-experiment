@@ -2,7 +2,14 @@
 #include <stdio.h>
 #include <sys/time.h>
 
-double start_time;
+static double start_time;
+
+static double cur_time();
+
+void log_init()
+{
+    start_time = cur_time();
+}
 
 void log_start()
 {
@@ -14,7 +21,17 @@ void log_end()
     printf("End time: %lf\n", cur_time() - start_time);
 }
 
-static double cur_time()
+void log_dump()
+{
+
+}
+
+void log_destroy()
+{
+
+}
+
+double cur_time()
 {
     struct timeval t;
     gettimeofday(&t, NULL);

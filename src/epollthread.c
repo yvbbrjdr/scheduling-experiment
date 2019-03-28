@@ -1,6 +1,12 @@
 #include "epollthread.h"
+#include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/epoll.h>
+#include "blockingthread.h"
 #include "threadcontext.h"
 #include "utils.h"
 
@@ -82,7 +88,7 @@ void *thread_epoll(void *_ctx)
         for (int i = 0; i < n_ev; ++i)
             if (evs[i].data.fd == ctx->prev_fd) {
                 for (;;) {
-                    int res = thread_context_blocking_read(ctx);
+                    int res = thread_context_read(ctx);
                     if (res >= 0) {
                         ++que;
                     } else if (errno == EWOULDBLOCK) {
@@ -93,7 +99,7 @@ void *thread_epoll(void *_ctx)
                     }
                 }
                 for (; que > 0;) {
-                    int res = thread_context_blocking_write(ctx, 0);
+                    int res = thread_context_write(ctx, 0);
                     if (res >= 0) {
                         --que;
                     } else if (errno == EWOULDBLOCK) {
@@ -105,7 +111,7 @@ void *thread_epoll(void *_ctx)
                 }
             } else {
                 for (; que > 0;) {
-                    int res = thread_context_blocking_write(ctx, 0);
+                    int res = thread_context_write(ctx, 0);
                     if (res >= 0) {
                         --que;
                     } else if (errno == EWOULDBLOCK) {
