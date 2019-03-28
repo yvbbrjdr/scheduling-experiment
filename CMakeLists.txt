@@ -9,7 +9,7 @@ add_executable(se
     src/blockingthread.c
     src/epollthread.c
     src/main.c
-    src/mutexthread.c
+    src/semathread.c
     src/threadcontext.c
     src/utils.c)
 find_package(Threads REQUIRED)

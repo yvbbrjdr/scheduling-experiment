@@ -1,4 +1,4 @@
-#include "mutexthread.h"
+#include "semathread.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
@@ -6,7 +6,7 @@
 #include "threadcontext.h"
 #include "utils.h"
 
-void run_mutex_threads(size_t n)
+void run_sema_threads(size_t n)
 {
     pthread_t tids[n];
     struct thread_context *ctxs[n];
@@ -31,7 +31,7 @@ void run_mutex_threads(size_t n)
     ctxs[0]->next_r_sema = r_semas;
     ctxs[0]->next_w_sema = w_semas;
     ctxs[0]->init = &initial;
-    pthread_create(tids, NULL, thread_mutex_head, ctxs[0]);
+    pthread_create(tids, NULL, thread_sema_head, ctxs[0]);
     for(size_t i = 1; i < n - 1; i++) {
         ctxs[i] = thread_context_init();
         ctxs[i]->prev_r_sema = r_semas + i - 1;
@@ -39,13 +39,13 @@ void run_mutex_threads(size_t n)
         ctxs[i]->next_r_sema = r_semas + i;
         ctxs[i]->next_w_sema = w_semas + i;
         ctxs[i]->init = &initial;
-        pthread_create(tids + i, NULL, thread_mutex, ctxs[i]);
+        pthread_create(tids + i, NULL, thread_sema, ctxs[i]);
     }
     ctxs[n - 1] = thread_context_init();
     ctxs[n - 1]->prev_r_sema = r_semas + n - 2;
     ctxs[n - 1]->prev_w_sema = w_semas + n - 2;
     ctxs[n - 1]->init = &initial;
-    pthread_create(tids + n - 1, NULL, thread_mutex_tail, ctxs[n - 1]);
+    pthread_create(tids + n - 1, NULL, thread_sema_tail, ctxs[n - 1]);
     for (size_t i = 0; i < n; ++i) {
         pthread_join(tids[i], NULL);
         thread_context_destroy(ctxs[i]);
@@ -57,7 +57,7 @@ void run_mutex_threads(size_t n)
     pthread_barrier_destroy(&initial);
 }
 
-void *thread_mutex(void *_ctx)
+void *thread_sema(void *_ctx)
 {
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);
@@ -70,7 +70,7 @@ void *thread_mutex(void *_ctx)
     return NULL;
 }
 
-void *thread_mutex_head(void *_ctx)
+void *thread_sema_head(void *_ctx)
 {
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);
@@ -83,7 +83,7 @@ void *thread_mutex_head(void *_ctx)
     return NULL;
 }
 
-void *thread_mutex_tail(void *_ctx)
+void *thread_sema_tail(void *_ctx)
 {
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);

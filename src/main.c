@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <signal.h>
 #include "blockingthread.h"
-#include "mutexthread.h"
+#include "semathread.h"
 #include "epollthread.h"
 #include "utils.h"
 
@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
 
 void handler(int signal)
 {
+    (void) signal;
     log_dump();
     log_destroy();
     exit(EXIT_SUCCESS);
