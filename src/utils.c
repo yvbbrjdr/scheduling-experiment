@@ -1,6 +1,7 @@
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <fcntl.h>
 #include <sys/time.h>
 #include <pthread.h>
 
@@ -61,6 +62,11 @@ void log_destroy()
     tmp = end_buffer;
     end_buffer = NULL;
     dblbuf_destroy(tmp);
+}
+
+void dummy_syscall()
+{
+    open(NULL, 0);
 }
 
 struct dblbuf *dblbuf_init(void)
