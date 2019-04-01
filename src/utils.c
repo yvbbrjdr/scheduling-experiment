@@ -72,7 +72,7 @@ void dummy_syscall()
 struct dblbuf *dblbuf_init(void)
 {
     struct dblbuf *buf = malloc(sizeof(*buf));
-    buf->size = 1000;
+    buf->size = 1000000;
     buf->index = 0;
     buf->buffer = malloc(buf->size * sizeof(*buf->buffer));
     pthread_mutex_init(&buf->lock, NULL);
