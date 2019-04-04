@@ -1,8 +1,9 @@
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <fcntl.h>
+#include <unistd.h>
 #include <sys/time.h>
+#include <sys/syscall.h>
 #include <pthread.h>
 
 struct dblbuf {
@@ -66,7 +67,8 @@ void log_destroy()
 
 void dummy_syscall()
 {
-    open(NULL, 0);
+    syscall(SYS_open, 0, 0, 0);
+    // syscall(SYS_getpid);
 }
 
 struct dblbuf *dblbuf_init(void)
