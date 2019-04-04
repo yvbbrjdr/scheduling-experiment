@@ -5,8 +5,8 @@ import re
 
 def main():
     que = queue.Queue()
-    start_pattern = re.compile(r'^Starting time: (.*)$')
-    end_pattern = re.compile(r'^Ending time: (.*)$')
+    start_pattern = re.compile(r'^Start time: (.*)$')
+    end_pattern = re.compile(r'^End time: (.*)$')
     while True:
         try:
             line = input()
