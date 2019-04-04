@@ -12,6 +12,7 @@ struct thread_context {
     sem_t *next_r_sema;
     sem_t *next_w_sema;
     pthread_barrier_t *init;
+    void (*func)(struct thread_context *);
 };
 
 struct thread_context *thread_context_init(void);

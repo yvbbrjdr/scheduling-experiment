@@ -14,6 +14,7 @@ struct thread_context *thread_context_init(void)
     ctx->next_r_sema = NULL;
     ctx->next_w_sema = NULL;
     ctx->init = NULL;
+    ctx->func = NULL;
     return ctx;
 }
 
