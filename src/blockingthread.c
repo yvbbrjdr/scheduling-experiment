@@ -69,9 +69,8 @@ void *thread_blocking_head(void *_ctx)
     for (;;) {
         log_start();
         int res = thread_context_write(ctx, 0);
-        if (res != 1) {
+        if (res != 1)
             return NULL;
-        }
     }
 }
 
