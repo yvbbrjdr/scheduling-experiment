@@ -67,8 +67,7 @@ void log_destroy()
 
 void dummy_syscall()
 {
-    syscall(SYS_open, 0, 0, 0);
-    // syscall(SYS_getpid);
+    syscall(SYS_getpid);
 }
 
 struct dblbuf *dblbuf_init(void)
