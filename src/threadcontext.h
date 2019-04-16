@@ -1,6 +1,8 @@
 #ifndef THREADCONTEXT_H
 #define THREADCONTEXT_H
 
+enum gen_type {None, FILE_DESCRIPTOR, BUFFER};
+
 #include <semaphore.h>
 #include <pthread.h>
 
@@ -12,6 +14,9 @@ struct thread_context {
     sem_t *next_r_sema;
     sem_t *next_w_sema;
     pthread_barrier_t *init;
+    cpu_set_t cpuset;
+    long rate;
+    enum gen_type gen_mode;
     void (*func)(struct thread_context *);
 };
 

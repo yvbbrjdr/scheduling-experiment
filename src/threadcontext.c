@@ -1,6 +1,6 @@
 #include "threadcontext.h"
 #include <stdlib.h>
-#include <unistd.h>
+#include <unistd.h>x
 
 struct thread_context *thread_context_init(void)
 {
@@ -15,6 +15,7 @@ struct thread_context *thread_context_init(void)
     ctx->next_w_sema = NULL;
     ctx->init = NULL;
     ctx->func = NULL;
+    ctx->gen_mode = NULL;
     return ctx;
 }
 
