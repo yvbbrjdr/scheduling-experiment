@@ -5,8 +5,9 @@
 #include <pthread.h>
 #include "threadcontext.h"
 #include "utils.h"
+#include "generatorthread.h"
 
-void run_blocking_threads(size_t n)
+void run_blocking_threads(size_t n, size_t rate)
 {
     pthread_t tids[n];
     struct thread_context *ctxs[n];
@@ -24,7 +25,8 @@ void run_blocking_threads(size_t n)
     ctxs[0] = thread_context_init();
     ctxs[0]->next_fd = pipefd[1];
     ctxs[0]->init = &initial;
-    pthread_create(tids, NULL, thread_blocking_head, ctxs[0]);
+    ctxs[0]->gen_mode = FILE_DESCRIPTOR;
+    pthread_create(tids, NULL, thread_generator, ctxs[0]);
     for (size_t i = 1; i < n - 1; ++i) {
         ctxs[i] = thread_context_init();
         ctxs[i]->prev_fd = pipefd[2 * (i - 1)];

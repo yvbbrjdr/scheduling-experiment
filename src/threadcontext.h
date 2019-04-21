@@ -15,7 +15,7 @@ struct thread_context {
     sem_t *next_w_sema;
     pthread_barrier_t *init;
     cpu_set_t cpuset;
-    long rate;
+    long gen_rate;
     enum gen_type gen_mode;
     void (*func)(struct thread_context *);
 };

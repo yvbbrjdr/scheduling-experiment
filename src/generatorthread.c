@@ -7,7 +7,7 @@
 #include "utils.h"
 #include <time.h>
 
-#define BILLION 1000000000
+#define BILLION 1000000000L
 
 void *thread_generator(void *_ctx) {
     //run this generator thread on a specific cpuset
@@ -15,33 +15,39 @@ void *thread_generator(void *_ctx) {
 
     struct thread_context *ctx = _ctx;
     int s;
-    pthread_t thread;
-
     //write differently depending on the mode
 
-    thread = pthread_self();
+    // cpu_set_t cpuset = ctx->cpuset;
 
-    cpu_set_t cpuset = ctx->cpuset;
+    // s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
+    // if (s != 0) {
+    //     handle_error_en(s, "pthread_setaffinity_np");
+    // }
+    log_init();
 
-    s = pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
-    if (s != 0) {
-        handle_error_en(s, "pthread_setaffinity_np");
-    }
-
+    thread_context_wait_barrier(ctx);
     if(ctx->gen_mode == FILE_DESCRIPTOR) {
-        //write to nextfd in a loop depending on if the time has advanced far enough
         struct timespec current, next;
         clock_gettime(CLOCK_MONOTONIC, &current);
+        long current_time = current.tv_sec * BILLION + current.tv_nsec;
+        long ns_period = BILLION / ctx->gen_rate;
         for (;;) {
             clock_gettime(CLOCK_MONOTONIC, &next);
-            long bytes_needed = (next.tv_nsec - current.tv_nsec) * BILLION * ctx->rate;
-            clock_gettime(CLOCK_MONOTONIC, &current);
-            for(int i = 0; i < bytes_needed; i++) {
-                log_start();
-                thread_context_write(ctx->next_fd, 0);
+            long next_time = next.tv_sec * BILLION + next.tv_nsec;
+            if((next_time - current_time) > ns_period) {
+                long bytes_needed = (next_time - current_time) / ns_period;
+                clock_gettime(CLOCK_MONOTONIC, &current);
+                current_time = current.tv_sec * BILLION + current.tv_nsec;
+                for(int i = 0; i < bytes_needed; i++) {
+                    log_start();
+                    thread_context_write(ctx, 0);
+                }
             }
+            
         }  
     } else if(ctx->gen_mode == BUFFER) {
         //TODO
     }
+
+    return NULL;
 }

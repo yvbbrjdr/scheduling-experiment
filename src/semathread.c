@@ -6,7 +6,7 @@
 #include "threadcontext.h"
 #include "utils.h"
 
-void run_sema_threads(size_t n)
+void run_sema_threads(size_t n, size_t rate)
 {
     pthread_t tids[n];
     struct thread_context *ctxs[n];

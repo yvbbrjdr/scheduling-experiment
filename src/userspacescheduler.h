@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include "threadcontext.h"
 
-void run_userspace_scheduler(size_t n);
+void run_userspace_scheduler(size_t n, size_t rate);
 
 void userspace_scheduler(struct thread_context *ctx);
 void userspace_scheduler_head(struct thread_context *ctx);

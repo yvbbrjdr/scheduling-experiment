@@ -12,6 +12,7 @@ add_executable(se
     src/semathread.c
     src/threadcontext.c
     src/userspacescheduler.c
-    src/utils.c)
+    src/utils.c
+    src/generatorthread.c)
 find_package(Threads REQUIRED)
 target_link_libraries(se ${CMAKE_THREAD_LIBS_INIT})

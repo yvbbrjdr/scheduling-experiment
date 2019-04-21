@@ -3,7 +3,7 @@
 
 #include <stddef.h>
 
-void run_blocking_threads(size_t n);
+void run_blocking_threads(size_t n, size_t rate);
 
 void *thread_blocking(void *_ctx);
 void *thread_blocking_head(void *_ctx);

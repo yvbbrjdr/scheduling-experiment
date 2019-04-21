@@ -11,20 +11,21 @@ static void handler(int);
 
 int main(int argc, char *argv[])
 {
-    if (argc != 3) {
-        printf("usage: %s <b|s|e|u> thread_num\n", argv[0]);
+    if (argc != 4) {
+        printf("usage: %s <b|s|e|u> thread_num rate\n", argv[0]);
         exit(EXIT_FAILURE);
     }
     signal(SIGINT, handler);
     size_t n = atoi(argv[2]);
+    size_t rate = atoi(argv[3]);
     if (argv[1][0] == 'b')
-        run_blocking_threads(n);
+        run_blocking_threads(n, rate);
     else if (argv[1][0] == 's')
-        run_sema_threads(n);
+        run_sema_threads(n, rate);
     else if (argv[1][0] == 'e')
-        run_epoll_threads(n);
+        run_epoll_threads(n, rate);
     else if (argv[1][0] == 'u')
-        run_userspace_scheduler(n);
+        run_userspace_scheduler(n, rate);
     else
         exit(EXIT_FAILURE);
     return 0;

@@ -1,7 +1,7 @@
 #include "userspacescheduler.h"
 #include "utils.h"
 
-void run_userspace_scheduler(size_t n)
+void run_userspace_scheduler(size_t n, size_t rate)
 {
     struct thread_context *ctxs[n];
     for (size_t i = 0; i < n; ++i) {
