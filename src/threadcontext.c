@@ -15,8 +15,8 @@ struct thread_context *thread_context_init(void)
     ctx->next_w_sema = NULL;
     ctx->init = NULL;
     ctx->func = NULL;
-    ctx->gen_mode = None;
     ctx->gen_rate = 1;
+    ctx->gen_pc_addr = NULL;
     return ctx;
 }
 

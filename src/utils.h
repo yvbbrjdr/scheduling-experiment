@@ -9,4 +9,8 @@ void log_destroy();
 
 void dummy_syscall();
 
+int pin_to_core(int);
+int disallow_core(int);
+int get_core_count();
+
 #endif // UTILS_H

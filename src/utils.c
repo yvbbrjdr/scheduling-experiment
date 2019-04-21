@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include "utils.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,6 +6,8 @@
 #include <sys/time.h>
 #include <sys/syscall.h>
 #include <pthread.h>
+#include <errno.h>
+#include <sched.h>
 
 struct dblbuf {
     size_t size;
@@ -105,7 +108,7 @@ void dblbuf_lock(struct dblbuf *buf)
 
 void dblbuf_unlock(struct dblbuf *buf)
 {
-    pthread_mutex_unlock(&buf->lock);
+    pthread_mutex_unlock(&buf->lock);disallow_core(0);
 }
 
 double cur_time()
@@ -113,4 +116,37 @@ double cur_time()
     struct timeval t;
     gettimeofday(&t, NULL);
     return t.tv_sec + t.tv_usec / 1000000.0;
+}
+
+//source: https://stackoverflow.com/questions/1407786/
+int pin_to_core(int core_id) {
+   int num_cores = get_core_count();
+   if (core_id < 0 || core_id >= num_cores)
+      return EINVAL;
+
+   cpu_set_t cpuset;
+   CPU_ZERO(&cpuset);
+   CPU_SET(core_id, &cpuset);
+
+   pthread_t current_thread = pthread_self();    
+   return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+}
+
+int disallow_core(int core_id) {
+    int num_cores = get_core_count();
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+
+    for(int i = 0; i < num_cores; i++) {
+        if(i != core_id) {
+                CPU_SET(i, &cpuset);
+        }
+    }
+
+    pthread_t current_thread = pthread_self();    
+    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+}
+
+int get_core_count() {
+    return sysconf(_SC_NPROCESSORS_ONLN);
 }

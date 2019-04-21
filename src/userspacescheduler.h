@@ -3,8 +3,9 @@
 
 #include <stddef.h>
 #include "threadcontext.h"
+#include <pthread.h>
 
-void run_userspace_scheduler(size_t n, size_t rate);
+void run_userspace_scheduler(size_t n, pthread_barrier_t *initial, long *gen_pc_addr);
 
 void userspace_scheduler(struct thread_context *ctx);
 void userspace_scheduler_head(struct thread_context *ctx);
