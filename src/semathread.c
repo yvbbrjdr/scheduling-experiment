@@ -11,10 +11,6 @@ void run_sema_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_p
     pin_func();
     pthread_t tids[n];
     struct thread_context *ctxs[n];
-    if (pthread_barrier_init(initial, NULL, n + 1) != 0) {
-        fprintf(stderr, "pthread_barrier_init: failed\n");
-        exit(EXIT_FAILURE);
-    }
     sem_t r_semas[n - 1];
     for (size_t i = 0; i < n - 1; ++i)
         if (sem_init(r_semas + i, 0, 0) != 0) {
