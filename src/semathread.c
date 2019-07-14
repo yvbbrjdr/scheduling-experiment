@@ -54,7 +54,6 @@ void run_sema_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_p
         sem_destroy(r_semas + i);
         sem_destroy(w_semas + i);
     }
-    pthread_barrier_destroy(initial);
 }
 
 void *thread_sema(void *_ctx)

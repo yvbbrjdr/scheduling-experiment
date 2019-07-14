@@ -45,7 +45,6 @@ void run_blocking_threads(size_t n, pthread_barrier_t *initial, volatile long *g
         close(pipefd[2 * i]);
         close(pipefd[2 * i + 1]);
     }
-    pthread_barrier_destroy(initial);
 }
 
 void *thread_blocking(void *_ctx)

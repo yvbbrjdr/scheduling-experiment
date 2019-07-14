@@ -48,7 +48,6 @@ void run_epoll_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_
         close(pipefd[2 * i]);
         close(pipefd[2 * i + 1]);
     }
-    pthread_barrier_destroy(initial);
 }
 
 void *thread_epoll(void *_ctx)

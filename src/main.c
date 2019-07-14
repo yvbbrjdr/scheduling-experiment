@@ -25,8 +25,6 @@ int main(int argc, char *argv[])
     signal(SIGINT, handler);
     size_t n = atoi(argv[3]);
     size_t rate = atoi(argv[4]);
-    //setup generator thread, log, and barrier
-    log_init();
     pthread_barrier_t initial;
 
     if (argv[1][0] == 'u') {
@@ -59,6 +57,7 @@ int main(int argc, char *argv[])
     }
 
     volatile long gen_pc = 0;
+    log_init();
     run_generator_thread(&initial, rate, &gen_pc);
 
     switch (argv[1][0]) {
@@ -79,6 +78,7 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
         break;
     }
+    pthread_barrier_destroy(&initial);
     return 0;
 }
 
