@@ -10,14 +10,14 @@ with open(sys.argv[1], 'r') as file:
     for f in file:
         split = f.split(':')
         diff.append(float(split[1]))
-        
+
 def bin(arr, size):
     width = float(sys.argv[3]) / size # (max(arr) - min(arr)) / size
     count = [0 for i in range(0,size + 1)]
 
     for item in arr:
         count[int( item  // width )] += 1
-    
+
     return count
 
 print("Min time:", min(diff))

@@ -142,7 +142,7 @@ int pin_disallow_zero() {
     for(int i = 1; i < num_cores; i++)
         CPU_SET(i, &cpuset);
 
-    pthread_t current_thread = pthread_self();    
+    pthread_t current_thread = pthread_self();
     return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
 }
 
