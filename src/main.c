@@ -13,6 +13,7 @@ static void handler(int);
 
 int main(int argc, char *argv[])
 {
+    srand(time(NULL));
     if (argc != 5) {
         printf("usage: %s <b|s|e|u> <s|r|n> thread_num rate\n", argv[0]);
         exit(EXIT_FAILURE);
@@ -22,8 +23,8 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
     signal(SIGINT, handler);
-    size_t n = atoi(argv[2]);
-    size_t rate = atoi(argv[3]);
+    size_t n = atoi(argv[3]);
+    size_t rate = atoi(argv[4]);
     //setup generator thread, log, and barrier
     log_init();
     pthread_barrier_t initial;
@@ -40,34 +41,44 @@ int main(int argc, char *argv[])
         }
     }
 
-    enum pin_mode mode;
-    if (argv[2][0] == 's') {
-        // single core pin (1)
-        mode = single;
-    } else if (argv[2][0] == 'r') {
-        mode = randompin;
-        // random core pin (nonzero)
-    } else if (argv[2][0] == 'n') {
-        // allow all cores except for core 0
-        mode = nopin;
-    } else {
-        printf("wrong arguments for pinning\n");
+    int (*pin_func)();
+    switch (argv[2][0]) {
+    case 's':
+        pin_func = pin_one;
+        break;
+    case 'r':
+        pin_func = pin_random_core;
+        break;
+    case 'n':
+        pin_func = pin_disallow_zero;
+        break;
+    default:
+        puts("wrong arguments for pinning");
         exit(EXIT_FAILURE);
+        break;
     }
 
     volatile long gen_pc = 0;
     run_generator_thread(&initial, rate, &gen_pc);
 
-    if (argv[1][0] == 'b')
-        run_blocking_threads(n, &initial, &gen_pc, mode);
-    else if (argv[1][0] == 's')
-        run_sema_threads(n, &initial, &gen_pc, mode);
-    else if (argv[1][0] == 'e')
-        run_epoll_threads(n, &initial, &gen_pc, mode);
-    else if (argv[1][0] == 'u')
-        run_userspace_scheduler(n, &initial, &gen_pc, mode);
-    else
+    switch (argv[1][0]) {
+    case 'b':
+        run_blocking_threads(n, &initial, &gen_pc, pin_func);
+        break;
+    case 's':
+        run_sema_threads(n, &initial, &gen_pc, pin_func);
+        break;
+    case 'e':
+        run_epoll_threads(n, &initial, &gen_pc, pin_func);
+        break;
+    case 'u':
+        run_userspace_scheduler(n, &initial, &gen_pc, pin_func);
+        break;
+    default:
+        puts("wrong arguments for type");
         exit(EXIT_FAILURE);
+        break;
+    }
     return 0;
 }
 

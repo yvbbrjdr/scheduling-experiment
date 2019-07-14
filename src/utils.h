@@ -1,8 +1,6 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-enum pin_mode{single, randompin, nopin};
-
 void log_init();
 void log_start();
 void log_end();

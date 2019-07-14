@@ -106,7 +106,7 @@ void dblbuf_lock(struct dblbuf *buf)
 
 void dblbuf_unlock(struct dblbuf *buf)
 {
-    pthread_mutex_unlock(&buf->lock);disallow_core(0);
+    pthread_mutex_unlock(&buf->lock);
 }
 
 double cur_time()
@@ -117,26 +117,21 @@ double cur_time()
 }
 
 // Source: https://stackoverflow.com/questions/1407786/
-int pin_zero() {
-    int num_cores = get_core_count();
-
+int pin_to_core(int core_id) {
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
-    CPU_SET(0, &cpuset);
+    CPU_SET(core_id, &cpuset);
 
-    pthread_t current_thread = pthread_self();    
-    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), cpuset);
+    pthread_t current_thread = pthread_self();
+    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+}
+
+int pin_zero() {
+    return pin_to_core(0);
 }
 
 int pin_one() {
-    int num_cores = get_core_count();
-
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(1, &cpuset);
-
-    pthread_t current_thread = pthread_self();    
-    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), cpuset);
+    return pin_to_core(1);
 }
 
 int pin_disallow_zero() {
@@ -148,19 +143,11 @@ int pin_disallow_zero() {
         CPU_SET(i, &cpuset);
 
     pthread_t current_thread = pthread_self();    
-    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), cpuset);
+    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
 }
 
 int pin_random_core() {
-   int num_cores = get_core_count();
-   cpu_set_t cpuset;
-   CPU_ZERO(&cpuset);
-
-   int core = rand() % (num_cores - 1) + 1
-   CPU_SET(core, &cpuset);
-
-   pthread_t current_thread = pthread_self();    
-    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), cpuset);
+   return pin_to_core(rand() % (get_core_count() - 1) + 1);
 }
 
 int get_core_count() {

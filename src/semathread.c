@@ -6,23 +6,9 @@
 #include "threadcontext.h"
 #include "utils.h"
 
-void run_sema_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr, enum pin_mode p)
+void run_sema_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr, int (*pin_func)())
 {
-
-    int (*pin_func)();
-    if (p == single) {
-        // single core pin (1)
-        pin_func = &pin_one;
-        pin_one();
-    } else if (p == randompin) {
-        pin_func = &pin_random_core;
-        pin_random_core();
-        // random core pin (nonzero)
-    } else if (p == nopin) {
-        pin_func = &pin_disallow_zero;
-        pin_disallow_zero();
-    }
-
+    pin_func();
     pthread_t tids[n];
     struct thread_context *ctxs[n];
     if (pthread_barrier_init(initial, NULL, n + 1) != 0) {

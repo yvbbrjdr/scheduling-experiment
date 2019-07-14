@@ -7,25 +7,11 @@
 #include "generatorthread.h"
 #include "utils.h"
 
-void run_blocking_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr, enum pin_mode p)
+void run_blocking_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr, int (*pin_func)())
 {
+    pin_func();
     pthread_t tids[n];
     struct thread_context *ctxs[n];
-
-    int (*pin_func)();
-    if (p == single) {
-        // single core pin (1)
-        pin_func = &pin_one;
-        pin_one();
-    } else if (p == randompin) {
-        pin_func = &pin_random_core;
-        pin_random_core();
-        // random core pin (nonzero)
-    } else if (p == nopin) {
-        pin_func = &pin_disallow_zero;
-        pin_disallow_zero();
-    }
-
     int pipefd[2 * (n - 1)];
     for (size_t i = 0; i < n - 1; ++i)
         if (pipe(pipefd + i * 2) == -1) {
