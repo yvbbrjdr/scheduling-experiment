@@ -117,30 +117,50 @@ double cur_time()
 }
 
 // Source: https://stackoverflow.com/questions/1407786/
-int pin_to_core(int core_id) {
-   int num_cores = get_core_count();
-   if (core_id < 0 || core_id >= num_cores)
-        return EINVAL;
+int pin_zero() {
+    int num_cores = get_core_count();
 
-   cpu_set_t cpuset;
-   CPU_ZERO(&cpuset);
-   CPU_SET(core_id, &cpuset);
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(0, &cpuset);
 
-   pthread_t current_thread = pthread_self();    
-   return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+    pthread_t current_thread = pthread_self();    
+    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), cpuset);
 }
 
-int disallow_core(int core_id) {
+int pin_one() {
+    int num_cores = get_core_count();
+
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(1, &cpuset);
+
+    pthread_t current_thread = pthread_self();    
+    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), cpuset);
+}
+
+int pin_disallow_zero() {
     int num_cores = get_core_count();
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
 
-    for(int i = 0; i < num_cores; i++)
-        if(i != core_id)
-            CPU_SET(i, &cpuset);
+    for(int i = 1; i < num_cores; i++)
+        CPU_SET(i, &cpuset);
 
     pthread_t current_thread = pthread_self();    
-    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);
+    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), cpuset);
+}
+
+int pin_random_core() {
+   int num_cores = get_core_count();
+   cpu_set_t cpuset;
+   CPU_ZERO(&cpuset);
+
+   int core = rand() % (num_cores - 1) + 1
+   CPU_SET(core, &cpuset);
+
+   pthread_t current_thread = pthread_self();    
+    return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), cpuset);
 }
 
 int get_core_count() {

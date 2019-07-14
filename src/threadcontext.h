@@ -15,6 +15,7 @@ struct thread_context {
     cpu_set_t cpuset;
     long gen_rate;
     volatile long *gen_pc_addr;
+    int (*pin_func)();
     void (*func)(struct thread_context *);
 };
 

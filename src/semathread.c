@@ -6,9 +6,23 @@
 #include "threadcontext.h"
 #include "utils.h"
 
-void run_sema_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr)
+void run_sema_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr, enum pin_mode p)
 {
-    disallow_core(0);
+
+    int (*pin_func)();
+    if (p == single) {
+        // single core pin (1)
+        pin_func = &pin_one;
+        pin_one();
+    } else if (p == randompin) {
+        pin_func = &pin_random_core;
+        pin_random_core();
+        // random core pin (nonzero)
+    } else if (p == nopin) {
+        pin_func = &pin_disallow_zero;
+        pin_disallow_zero();
+    }
+
     pthread_t tids[n];
     struct thread_context *ctxs[n];
     if (pthread_barrier_init(initial, NULL, n + 1) != 0) {
@@ -32,6 +46,7 @@ void run_sema_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_p
     ctxs[0]->next_w_sema = w_semas;
     ctxs[0]->init = initial;
     ctxs[0]->gen_pc_addr = gen_pc_addr;
+    ctxs[0]->pin_func = pin_func;
     pthread_create(tids, NULL, thread_sema_head, ctxs[0]);
     for(size_t i = 1; i < n - 1; i++) {
         ctxs[i] = thread_context_init();
@@ -40,12 +55,14 @@ void run_sema_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_p
         ctxs[i]->next_r_sema = r_semas + i;
         ctxs[i]->next_w_sema = w_semas + i;
         ctxs[i]->init = initial;
+        ctxs[i]->pin_func = pin_func;
         pthread_create(tids + i, NULL, thread_sema, ctxs[i]);
     }
     ctxs[n - 1] = thread_context_init();
     ctxs[n - 1]->prev_r_sema = r_semas + n - 2;
     ctxs[n - 1]->prev_w_sema = w_semas + n - 2;
     ctxs[n - 1]->init = initial;
+    ctxs[n - 1]->pin_func = pin_func;
     pthread_create(tids + n - 1, NULL, thread_sema_tail, ctxs[n - 1]);
     for (size_t i = 0; i < n; ++i) {
         pthread_join(tids[i], NULL);
@@ -60,8 +77,8 @@ void run_sema_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_p
 
 void *thread_sema(void *_ctx)
 {
-    disallow_core(0);
     struct thread_context *ctx = _ctx;
+    ctx->pin_func();
     thread_context_wait_barrier(ctx);
     for (;;) {
         thread_context_prev_r_sema_down(ctx);
@@ -74,8 +91,8 @@ void *thread_sema(void *_ctx)
 
 void *thread_sema_head(void *_ctx)
 {
-    disallow_core(0);
     struct thread_context *ctx = _ctx;
+    ctx->pin_func();
     thread_context_wait_barrier(ctx);
     long current_pc = 0;
     for (;;) {
@@ -94,8 +111,8 @@ void *thread_sema_head(void *_ctx)
 
 void *thread_sema_tail(void *_ctx)
 {
-    disallow_core(0);
     struct thread_context *ctx = _ctx;
+    ctx->pin_func();
     thread_context_wait_barrier(ctx);
     for (;;) {
         thread_context_prev_r_sema_down(ctx);

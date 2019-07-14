@@ -2,9 +2,16 @@
 #include "utils.h"
 #include <stdio.h>
 
-void run_userspace_scheduler(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr)
+void run_userspace_scheduler(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr, enum pin_mode p)
 {
-    disallow_core(0);
+    if (p == single) {
+        pin_one();
+    } else if (p == randompin) {
+        pin_random_core(); // this doesn't make  much sense tbh
+    } else if (p == nopin) {
+        pin_disallow_zero();
+    }
+
     pthread_barrier_wait(initial);
     struct thread_context *ctxs[n];
     for (size_t i = 0; i < n; ++i) {

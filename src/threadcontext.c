@@ -16,7 +16,7 @@ struct thread_context *thread_context_init(void)
     ctx->init = NULL;
     ctx->gen_rate = 0;
     ctx->gen_pc_addr = NULL;
-    ctx->func = NULL;
+    ctx->pin_func = NULL;
     return ctx;
 }
 

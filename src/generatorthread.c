@@ -21,7 +21,7 @@ pthread_t run_generator_thread(pthread_barrier_t *initial, long gen_rate, volati
 void *thread_generator(void *_ctx)
 {
     struct thread_context *ctx = _ctx;
-    pin_to_core(0);
+    pin_zero();
     thread_context_wait_barrier(ctx);
     double prev_time, next_time, period;
     prev_time = cur_time();

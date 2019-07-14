@@ -13,8 +13,8 @@ static void handler(int);
 
 int main(int argc, char *argv[])
 {
-    if (argc != 4) {
-        printf("usage: %s <b|s|e|u> thread_num rate\n", argv[0]);
+    if (argc != 5) {
+        printf("usage: %s <b|s|e|u> <s|r|n> thread_num rate\n", argv[0]);
         exit(EXIT_FAILURE);
     }
     if (get_core_count() < 2) {
@@ -40,17 +40,32 @@ int main(int argc, char *argv[])
         }
     }
 
+    enum pin_mode mode;
+    if (argv[2][0] == 's') {
+        // single core pin (1)
+        mode = single;
+    } else if (argv[2][0] == 'r') {
+        mode = randompin;
+        // random core pin (nonzero)
+    } else if (argv[2][0] == 'n') {
+        // allow all cores except for core 0
+        mode = nopin;
+    } else {
+        printf("wrong arguments for pinning\n");
+        exit(EXIT_FAILURE);
+    }
+
     volatile long gen_pc = 0;
     run_generator_thread(&initial, rate, &gen_pc);
 
     if (argv[1][0] == 'b')
-        run_blocking_threads(n, &initial, &gen_pc);
+        run_blocking_threads(n, &initial, &gen_pc, mode);
     else if (argv[1][0] == 's')
-        run_sema_threads(n, &initial, &gen_pc);
+        run_sema_threads(n, &initial, &gen_pc, mode);
     else if (argv[1][0] == 'e')
-        run_epoll_threads(n, &initial, &gen_pc);
+        run_epoll_threads(n, &initial, &gen_pc, mode);
     else if (argv[1][0] == 'u')
-        run_userspace_scheduler(n, &initial, &gen_pc);
+        run_userspace_scheduler(n, &initial, &gen_pc, mode);
     else
         exit(EXIT_FAILURE);
     return 0;

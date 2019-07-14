@@ -10,9 +10,22 @@
 #include "threadcontext.h"
 #include "utils.h"
 
-void run_epoll_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr)
+void run_epoll_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr, enum pin_mode p)
 {
-    disallow_core(0);
+    int (*pin_func)();
+    if (p == single) {
+        // single core pin (1)
+        pin_func = &pin_one;
+        pin_one();
+    } else if (p == randompin) {
+        pin_func = &pin_random_core;
+        pin_random_core();
+        // random core pin (nonzero)
+    } else if (p == nopin) {
+        pin_func = &pin_disallow_zero;
+        pin_disallow_zero();
+    }
+
     pthread_t tids[n];
     struct thread_context *ctxs[n];
     int pipefd[2 * (n - 1)];
@@ -25,17 +38,20 @@ void run_epoll_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_
     ctxs[0]->next_fd = pipefd[1];
     ctxs[0]->init = initial;
     ctxs[0]->gen_pc_addr = gen_pc_addr;
+    ctxs[0]->pin_func = pin_func;
     pthread_create(tids, NULL, thread_blocking_head, ctxs[0]);
     for (size_t i = 1; i < n - 1; ++i) {
         ctxs[i] = thread_context_init();
         ctxs[i]->prev_fd = pipefd[2 * (i - 1)];
         ctxs[i]->next_fd = pipefd[2 * i + 1];
         ctxs[i]->init = initial;
+        ctxs[i]->pin_func = pin_func;
         pthread_create(tids + i, NULL, thread_epoll, ctxs[i]);
     }
     ctxs[n - 1] = thread_context_init();
     ctxs[n - 1]->prev_fd = pipefd[2 * (n - 2)];
     ctxs[n - 1]->init = initial;
+    ctxs[n - 1]->pin_func = pin_func;
     pthread_create(tids + n - 1, NULL, thread_blocking_tail, ctxs[n - 1]);
     for (size_t i = 0; i < n; ++i) {
         pthread_join(tids[i], NULL);
@@ -50,8 +66,8 @@ void run_epoll_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_
 
 void *thread_epoll(void *_ctx)
 {
-    disallow_core(0);
     struct thread_context *ctx = _ctx;
+    ctx->pin_func();
     int flags = fcntl(ctx->prev_fd, F_GETFL, 0);
     fcntl(ctx->prev_fd, F_SETFL, flags | O_NONBLOCK);
     flags = fcntl(ctx->next_fd, F_GETFL, 0);
