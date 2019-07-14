@@ -86,6 +86,5 @@ void handler(int signal)
 {
     (void) signal;
     log_dump();
-    log_destroy();
     exit(EXIT_SUCCESS);
 }
