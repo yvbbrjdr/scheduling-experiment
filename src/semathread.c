@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <unistd.h>
 #include "threadcontext.h"
 #include "utils.h"
 
@@ -62,6 +63,8 @@ void *thread_sema(void *_ctx)
     ctx->pin_func();
     thread_context_wait_barrier(ctx);
     for (;;) {
+        if (log_dumping)
+            pause();
         thread_context_prev_r_sema_down(ctx);
         thread_context_next_w_sema_down(ctx);
         thread_context_next_r_sema_up(ctx);
@@ -77,6 +80,8 @@ void *thread_sema_head(void *_ctx)
     thread_context_wait_barrier(ctx);
     long current_pc = 0;
     for (;;) {
+        if (log_dumping)
+            pause();
         long next_pc = *(ctx->gen_pc_addr);
         long diff = next_pc - current_pc;
         if (diff > 0) {
@@ -96,6 +101,8 @@ void *thread_sema_tail(void *_ctx)
     ctx->pin_func();
     thread_context_wait_barrier(ctx);
     for (;;) {
+        if (log_dumping)
+            pause();
         thread_context_prev_r_sema_down(ctx);
         log_end();
         thread_context_prev_w_sema_up(ctx);

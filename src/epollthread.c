@@ -79,6 +79,8 @@ void *thread_epoll(void *_ctx)
     size_t que = 0;
     thread_context_wait_barrier(ctx);
     for (;;) {
+        if (log_dumping)
+            pause();
         struct epoll_event evs[2];
         int n_ev = epoll_wait(epoll_fd, evs, 2, -1);
         if (n_ev == -1) {

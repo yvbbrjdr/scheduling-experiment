@@ -24,12 +24,14 @@ static void dblbuf_unlock(struct dblbuf *buf);
 
 static double start_time;
 static struct dblbuf *start_buffer, *end_buffer;
+int log_dumping;
 
 void log_init()
 {
     start_buffer = dblbuf_init();
     end_buffer = dblbuf_init();
     start_time = cur_time();
+    log_dumping = 0;
 }
 
 void log_start()
@@ -48,6 +50,7 @@ void log_dump()
 {
     dblbuf_lock(start_buffer);
     dblbuf_lock(end_buffer);
+    log_dumping = 1;
     for (size_t i = 0; i < start_buffer->index; ++i)
         printf("Start time: %lf\n", start_buffer->buffer[i]);
     for (size_t i = 0; i < end_buffer->index; ++i)

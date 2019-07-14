@@ -1,6 +1,7 @@
 #include "userspacescheduler.h"
-#include "utils.h"
 #include <stdio.h>
+#include <unistd.h>
+#include "utils.h"
 
 void run_userspace_scheduler(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr, int (*pin_func)())
 {
@@ -14,6 +15,8 @@ void run_userspace_scheduler(size_t n, pthread_barrier_t *initial, volatile long
     ctxs[n - 1]->func = userspace_scheduler_tail;
     long current_pc = 0;
     for (;;) {
+        if (log_dumping)
+            pause();
         long next_pc = *gen_pc_addr;
         long diff = next_pc - current_pc;
         if (diff > 0) {

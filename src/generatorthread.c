@@ -4,6 +4,7 @@
 #include <sched.h>
 #include <math.h>
 #include <pthread.h>
+#include <unistd.h>
 #include "threadcontext.h"
 #include "utils.h"
 
@@ -27,6 +28,8 @@ void *thread_generator(void *_ctx)
     prev_time = cur_time();
     period = 1.0 / ctx->gen_rate;
     for (;;) {
+        if (log_dumping)
+            pause();
         next_time = cur_time();
         double time_diff = next_time - prev_time;
         if (time_diff > period) {

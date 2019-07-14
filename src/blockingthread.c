@@ -53,6 +53,8 @@ void *thread_blocking(void *_ctx)
     ctx->pin_func();
     thread_context_wait_barrier(ctx);
     for (;;) {
+        if (log_dumping)
+            pause();
         int res = thread_context_read(ctx);
         if (res == -1)
             return NULL;
@@ -69,6 +71,8 @@ void *thread_blocking_head(void *_ctx)
     thread_context_wait_barrier(ctx);
     long current_pc = 0;
     for (;;) {
+        if (log_dumping)
+            pause();
         long next_pc = *(ctx->gen_pc_addr);
         long diff = next_pc - current_pc;
         if (diff > 0) {
@@ -88,6 +92,8 @@ void *thread_blocking_tail(void *_ctx)
     ctx->pin_func();
     thread_context_wait_barrier(ctx);
     for (;;) {
+        if (log_dumping)
+            pause();
         int res = thread_context_read(ctx);
         if (res == -1)
             return NULL;

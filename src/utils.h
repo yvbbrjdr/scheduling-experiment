@@ -5,6 +5,7 @@ void log_init();
 void log_start();
 void log_end();
 void log_dump();
+extern int log_dumping;
 void log_destroy();
 
 double cur_time();
