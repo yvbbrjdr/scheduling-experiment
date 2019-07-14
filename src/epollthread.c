@@ -10,8 +10,9 @@
 #include "threadcontext.h"
 #include "utils.h"
 
-void run_epoll_threads(size_t n, pthread_barrier_t *initial, long *gen_pc_addr)
+void run_epoll_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr)
 {
+    disallow_core(0);
     pthread_t tids[n];
     struct thread_context *ctxs[n];
     int pipefd[2 * (n - 1)];
@@ -49,6 +50,7 @@ void run_epoll_threads(size_t n, pthread_barrier_t *initial, long *gen_pc_addr)
 
 void *thread_epoll(void *_ctx)
 {
+    disallow_core(0);
     struct thread_context *ctx = _ctx;
     int flags = fcntl(ctx->prev_fd, F_GETFL, 0);
     fcntl(ctx->prev_fd, F_SETFL, flags | O_NONBLOCK);

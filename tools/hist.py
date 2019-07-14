@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import sys
 diff = []
 
@@ -10,8 +12,7 @@ with open(sys.argv[1], 'r') as file:
         diff.append(float(split[1]))
         
 def bin(arr, size):
-    width = float(sys.argv[3]) / size#(max(arr) - min(arr)) / size
-    min_item = min(arr)
+    width = float(sys.argv[3]) / size # (max(arr) - min(arr)) / size
     count = [0 for i in range(0,size + 1)]
 
     for item in arr:
@@ -27,7 +28,5 @@ print("Histogram binned with " + str(sys.argv[2]) + " bins")
 print("Bins (minimum value & inclusive):")
 print([i * float(sys.argv[3])/int(sys.argv[2]) for i in range(int(sys.argv[2]))])
 
-
 print("Binned values:")
 print(bin(diff, int(sys.argv[2])))
-

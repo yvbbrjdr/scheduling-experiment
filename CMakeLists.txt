@@ -8,11 +8,12 @@ add_definitions(-Wall -Wextra)
 add_executable(se
     src/blockingthread.c
     src/epollthread.c
+    src/generatorthread.c
     src/main.c
     src/semathread.c
     src/threadcontext.c
     src/userspacescheduler.c
-    src/utils.c
-    src/generatorthread.c)
+    src/utils.c)
 find_package(Threads REQUIRED)
 target_link_libraries(se ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(se m)

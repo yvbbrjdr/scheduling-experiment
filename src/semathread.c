@@ -6,7 +6,7 @@
 #include "threadcontext.h"
 #include "utils.h"
 
-void run_sema_threads(size_t n, pthread_barrier_t *initial, long *gen_pc_addr)
+void run_sema_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr)
 {
     disallow_core(0);
     pthread_t tids[n];
@@ -77,17 +77,16 @@ void *thread_sema_head(void *_ctx)
     disallow_core(0);
     struct thread_context *ctx = _ctx;
     thread_context_wait_barrier(ctx);
-    long current_pc = *(ctx->gen_pc_addr);
+    long current_pc = 0;
     for (;;) {
         long next_pc = *(ctx->gen_pc_addr);
-        if(next_pc > current_pc) {
-            thread_context_next_w_sema_down(ctx);
-            long diff = next_pc - current_pc;
-            current_pc = *(ctx->gen_pc_addr);
-            for(int i = 0; i < diff; i++) {
+        long diff = next_pc - current_pc;
+        if (diff > 0) {
+            current_pc = next_pc;
+            for (long i = 0; i < diff; ++i) {
+                thread_context_next_w_sema_down(ctx);
                 thread_context_next_r_sema_up(ctx);
             }
-            
         }
     }
     return NULL;

@@ -25,8 +25,6 @@ static void dblbuf_unlock(struct dblbuf *buf);
 static double start_time;
 static struct dblbuf *start_buffer, *end_buffer;
 
-static double cur_time();
-
 void log_init()
 {
     start_buffer = dblbuf_init();
@@ -118,11 +116,11 @@ double cur_time()
     return t.tv_sec + t.tv_usec / 1000000.0;
 }
 
-//source: https://stackoverflow.com/questions/1407786/
+// Source: https://stackoverflow.com/questions/1407786/
 int pin_to_core(int core_id) {
    int num_cores = get_core_count();
    if (core_id < 0 || core_id >= num_cores)
-      return EINVAL;
+        return EINVAL;
 
    cpu_set_t cpuset;
    CPU_ZERO(&cpuset);
@@ -137,11 +135,9 @@ int disallow_core(int core_id) {
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
 
-    for(int i = 0; i < num_cores; i++) {
-        if(i != core_id) {
-                CPU_SET(i, &cpuset);
-        }
-    }
+    for(int i = 0; i < num_cores; i++)
+        if(i != core_id)
+            CPU_SET(i, &cpuset);
 
     pthread_t current_thread = pthread_self();    
     return pthread_setaffinity_np(current_thread, sizeof(cpu_set_t), &cpuset);

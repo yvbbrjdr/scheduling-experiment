@@ -4,7 +4,7 @@
 #include <stddef.h>
 #include <pthread.h>
 
-void run_sema_threads(size_t n, pthread_barrier_t *initial, long *gen_pc_addr);
+void run_sema_threads(size_t n, pthread_barrier_t *initial, volatile long *gen_pc_addr);
 
 void *thread_sema(void *_ctx);
 void *thread_sema_head(void *_ctx);

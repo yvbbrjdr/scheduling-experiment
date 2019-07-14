@@ -7,6 +7,8 @@ void log_end();
 void log_dump();
 void log_destroy();
 
+double cur_time();
+
 void dummy_syscall();
 
 int pin_to_core(int);

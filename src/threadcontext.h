@@ -1,7 +1,6 @@
 #ifndef THREADCONTEXT_H
 #define THREADCONTEXT_H
 
-
 #include <semaphore.h>
 #include <pthread.h>
 
@@ -15,7 +14,7 @@ struct thread_context {
     pthread_barrier_t *init;
     cpu_set_t cpuset;
     long gen_rate;
-    long *gen_pc_addr;
+    volatile long *gen_pc_addr;
     void (*func)(struct thread_context *);
 };
 
