@@ -52,9 +52,9 @@ void log_dump()
     dblbuf_lock(end_buffer);
     log_dumping = 1;
     for (size_t i = 0; i < start_buffer->index; ++i)
-        printf("Start time: %lf\n", start_buffer->buffer[i]);
+        printf("s%lf\n", start_buffer->buffer[i]);
     for (size_t i = 0; i < end_buffer->index; ++i)
-        printf("End time: %lf\n", end_buffer->buffer[i]);
+        printf("e%lf\n", end_buffer->buffer[i]);
     dblbuf_unlock(end_buffer);
     dblbuf_unlock(start_buffer);
 }
