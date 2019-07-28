@@ -13,14 +13,11 @@ struct dblbuf {
     size_t size;
     size_t index;
     double *buffer;
-    pthread_mutex_t lock;
 };
 
 static struct dblbuf *dblbuf_init(void);
 static void dblbuf_destroy(struct dblbuf *buf);
 static void dblbuf_push(struct dblbuf *buf, double data);
-static void dblbuf_lock(struct dblbuf *buf);
-static void dblbuf_unlock(struct dblbuf *buf);
 
 static double start_time;
 static struct dblbuf *start_buffer, *end_buffer;
@@ -48,15 +45,11 @@ void log_end()
 
 void log_dump()
 {
-    dblbuf_lock(start_buffer);
-    dblbuf_lock(end_buffer);
     log_dumping = 1;
     for (size_t i = 0; i < start_buffer->index; ++i)
         printf("s%lf\n", start_buffer->buffer[i]);
     for (size_t i = 0; i < end_buffer->index; ++i)
         printf("e%lf\n", end_buffer->buffer[i]);
-    dblbuf_unlock(end_buffer);
-    dblbuf_unlock(start_buffer);
 }
 
 void log_destroy()
@@ -80,36 +73,22 @@ struct dblbuf *dblbuf_init(void)
     buf->size = 40000000;
     buf->index = 0;
     buf->buffer = malloc(buf->size * sizeof(*buf->buffer));
-    pthread_mutex_init(&buf->lock, NULL);
     return buf;
 }
 
 void dblbuf_destroy(struct dblbuf *buf)
 {
     free(buf->buffer);
-    pthread_mutex_destroy(&buf->lock);
     free(buf);
 }
 
 void dblbuf_push(struct dblbuf *buf, double data)
 {
-    dblbuf_lock(buf);
     if (buf->index == buf->size) {
         buf->size *= 2;
         buf->buffer = realloc(buf->buffer, buf->size * sizeof(*buf->buffer));
     }
     buf->buffer[buf->index++] = data;
-    dblbuf_unlock(buf);
-}
-
-void dblbuf_lock(struct dblbuf *buf)
-{
-    pthread_mutex_lock(&buf->lock);
-}
-
-void dblbuf_unlock(struct dblbuf *buf)
-{
-    pthread_mutex_unlock(&buf->lock);
 }
 
 double cur_time()
